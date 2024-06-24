@@ -9,7 +9,7 @@ const nextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://webapp-git-reclaim-citizenspring1.vercel.app",
+            value: "https://webapp-seven-chi.vercel.app",
           },
           {
             key: "Access-Control-Allow-Methods",
