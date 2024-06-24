@@ -17,7 +17,7 @@ export function cors(req: Request, res: any): boolean {
   );
 
   if (req.method === "OPTIONS") {
-    res.status(200).end();
+    res.status = 200;
     return true;
   }
 
