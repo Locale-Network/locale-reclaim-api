@@ -2,15 +2,30 @@ import { Reason } from "@/app/constants/reason.enum";
 import { Reclaim } from "@reclaimprotocol/js-sdk";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
-  const requestData = await request.formData();
-  const providerId = requestData.get("providerId") as string | null;
-  const account = requestData.get("account") as string | null;
-  const deepLinkUrl = requestData.get("deeplink_url") as string | null;
-  const reason = requestData.get("reason") as Reason | null;
+interface SignInBody {
+  providerId: string;
+  account: string;
+  deeplink_url: string;
+  reason: Reason;
+}
 
-  const appSecret = process.env.SECRET_ID as string;
-  const appId = process.env.APP_ID as string;
+export async function POST(request: Request) {
+  const {
+    providerId,
+    account,
+    deeplink_url: deepLinkUrl,
+    reason,
+  } = (await request.json()) as SignInBody;
+
+  const appSecret = process.env.SECRET_ID;
+  const appId = process.env.APP_ID;
+  const callbackUrl = process.env.RECLAIM_CALLBACK_URL;
+  if (!appSecret || !appId || !callbackUrl) {
+    return NextResponse.json(
+      { message: "missing configuration" },
+      { status: 500 }
+    );
+  }
 
   const reclaimClient = new Reclaim.ProofRequest(appId);
 
@@ -20,6 +35,8 @@ export async function POST(request: Request) {
     if (deepLinkUrl) {
       reclaimClient.setAppCallbackUrl(deepLinkUrl);
     }
+
+    reclaimClient.setAppCallbackUrl(callbackUrl);
 
     reclaimClient.setSignature(
       await reclaimClient.generateSignature(appSecret)
@@ -33,15 +50,15 @@ export async function POST(request: Request) {
           break;
         default:
           return NextResponse.json(
-            {message: "reason not found"},
-            {status: 400}
+            { message: "reason not found" },
+            { status: 400 }
           );
       }
       message += `${account} ${Date.now().toString()}`;
       reclaimClient.addContext(account, message);
     }
 
-    const {requestUrl: signedUrl} =
+    const { requestUrl: signedUrl } =
       await reclaimClient.createVerificationRequest();
 
     return NextResponse.json({
