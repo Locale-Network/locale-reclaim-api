@@ -1,17 +1,21 @@
 import { PrismaClient } from "@prisma/client";
 import { Reclaim } from "@reclaimprotocol/js-sdk";
 import { sql } from "@vercel/postgres";
-import { NextApiRequest, NextApiResponse } from "next";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextApiRequest, res: NextApiResponse) {
-  const proof = JSON.parse(decodeURIComponent(req.body));
+export async function POST(req: Request) {
+  const proof = await req.json();
 
   const isProofVerified = await Reclaim.verifySignedProof(proof);
   if (!isProofVerified) {
-    return res.status(400).send({ message: "Proof verification failed" });
+    return NextResponse.json(
+      {
+        message: "Proof verification failed",
+      },
+      { status: 400 }
+    );
   }
 
   const context = proof.claimData.context;
