@@ -1,5 +1,4 @@
 import { Reason } from "@/app/constants/reason.enum";
-import { cors } from "@/utils/cors";
 import { Reclaim } from "@reclaimprotocol/js-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
