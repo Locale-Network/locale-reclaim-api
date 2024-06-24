@@ -1,6 +1,7 @@
 import { Reason } from "@/app/constants/reason.enum";
+import { cors } from "@/utils/cors";
 import { Reclaim } from "@reclaimprotocol/js-sdk";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface SignInBody {
   providerId: string;
@@ -10,6 +11,10 @@ interface SignInBody {
 }
 
 export async function POST(request: Request) {
+  const res = NextResponse.next();
+
+  if (cors(request, res)) return res;
+
   const {
     providerId,
     account,
@@ -69,4 +74,10 @@ export async function POST(request: Request) {
       },
     });
   }
+}
+
+export async function OPTIONS(req: NextRequest): Promise<NextResponse> {
+  const res = NextResponse.next();
+  cors(req, res);
+  return res;
 }
