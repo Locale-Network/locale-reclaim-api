@@ -20,3 +20,26 @@ model Proof {
 
     @@map("proofs")
 }
+
+model Account {
+    id           Int      @id @default(autoincrement())
+    accountId    String?  @db.VarChar(255)
+    name         String?  @db.VarChar(255)
+    officialName String?  @db.VarChar(255)
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    @@map("accounts")
+}
+
+model Transaction {
+    id            Int      @id @default(autoincrement())
+    transactionId String?  @db.VarChar(255)
+    accountId     String?  @db.VarChar(255)
+    amount        Float?
+    currency      String?  @db.VarChar(255)
+    merchant      String?  @db.VarChar(255)
+    merchantId    String?  @db.VarChar(255)
+    createdAt     DateTime @default(now()) @map("created_at")
+
+    @@map("transactions")
+}
