@@ -23,23 +23,24 @@ model Proof {
 
 model Account {
     id           Int      @id @default(autoincrement())
-    accountId    String?  @db.VarChar(255)
+    accountId    String?  @map("account_id") @db.VarChar(255)
     name         String?  @db.VarChar(255)
-    officialName String?  @db.VarChar(255)
+    officialName String?  @map("official_name") @db.VarChar(255)
     createdAt    DateTime @default(now()) @map("created_at")
 
     @@map("accounts")
 }
 
 model Transaction {
-    id            Int      @id @default(autoincrement())
-    transactionId String?  @db.VarChar(255)
-    accountId     String?  @db.VarChar(255)
+    id            Int       @id @default(autoincrement())
+    transactionId String?   @map("transaction_id") @db.VarChar(255)
+    accountId     String?   @map("account_id") @db.VarChar(255)
     amount        Float?
-    currency      String?  @db.VarChar(255)
-    merchant      String?  @db.VarChar(255)
-    merchantId    String?  @db.VarChar(255)
-    createdAt     DateTime @default(now()) @map("created_at")
+    currency      String?   @db.VarChar(255)
+    merchant      String?   @db.VarChar(255)
+    merchantId    String?   @map("merchant_id") @db.VarChar(255)
+    date          DateTime? @default(now())
+    isDeleted     Boolean   @default(false) @map("is_deleted")
 
     @@map("transactions")
 }

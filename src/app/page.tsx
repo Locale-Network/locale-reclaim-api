@@ -45,7 +45,7 @@ export default function Home() {
   });
 
   const getInfo = useCallback(async () => {
-    const response = await fetch("/api/info", {method: "POST"});
+    const response = await fetch(`/api/info?access_token=${state.accessToken}`, {method: "POST"});
     if (!response.ok) {
       setState((prevState) => ({...prevState, backend: false}));
       return {paymentInitiation: false};
@@ -105,9 +105,9 @@ export default function Home() {
 
   useEffect(() => {
     const init = async () => {
-      await fetch("/api/transactions", {method: "GET"});
+      await fetch(`/api/transactions?access_token=${state.accessToken}`, {method: "GET"});
 
-      const response = await fetch("/api/accounts", {method: "GET"});
+      const response = await fetch(`/api/accounts?access_token=${state.accessToken}`, {method: "GET"});
 
       const data = await response.json();
       console.log(data);

@@ -1,12 +1,13 @@
-import { authManager } from "@/app/utils/authManagerInstance";
-import { VercelClient } from "@vercel/postgres";
+import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { RemovedTransaction, Transaction, TransactionsSyncRequest } from "plaid";
 import client from "../../utils/plaid";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function GET(req:NextRequest, res: NextResponse) {
+const prisma = new PrismaClient();
+
+export async function GET(req: NextRequest, res: NextResponse) {
   try {
     let cursor = "";
     let added: Transaction[] = [];
@@ -14,7 +15,16 @@ export async function GET(req:NextRequest, res: NextResponse) {
     let removed: RemovedTransaction[] = [];
     let hasMore = true;
 
-    const access_token = authManager.getAccessToken();
+    const url = new URL(req.url);
+    const access_token = url.searchParams.get("access_token");
+
+    if (!access_token) {
+      return NextResponse.json(
+        {error: "Access token is required"},
+        {status: 400}
+      );
+    }
+
     while (hasMore) {
       const requestPayload: TransactionsSyncRequest = {
         access_token,
@@ -46,10 +56,7 @@ export async function GET(req:NextRequest, res: NextResponse) {
       }
     })();
 
-    return NextResponse.json(
-      {latest_transactions: added},
-      {status: 200}
-    );
+    return NextResponse.json({latest_transactions: added}, {status: 200});
   } catch (error) {
     console.error(error);
     return NextResponse.json({error: "Internal Server Error"}, {status: 500});
@@ -57,88 +64,136 @@ export async function GET(req:NextRequest, res: NextResponse) {
 }
 
 async function insertTransactions(transactions: Transaction[]) {
-  const dbClient = new VercelClient();
-  await dbClient.connect();
+  const transactionData = transactions.map((transaction) => ({
+    accountId: transaction.account_id,
+    amount: transaction.amount,
+    currency: transaction.iso_currency_code,
+    date: transaction.datetime,
+    merchant: transaction.merchant_name,
+    merchantId: transaction.merchant_entity_id,
+    transactionId: transaction.transaction_id,
+  }));
 
-  try {
-    await dbClient.query("BEGIN");
-    const insertQuery = `
-      INSERT INTO transactions (account_id, amount, currency, date, merchant, merchant_id, transaction_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (transaction_id, account_id) DO NOTHING
-    `;
-    for (const transaction of transactions) {
-      await dbClient.query(insertQuery, [
-        transaction.account_id,
-        transaction.amount,
-        transaction.iso_currency_code,
-        transaction.datetime,
-        transaction.merchant_name,
-        transaction.merchant_entity_id,
-        transaction.transaction_id,
-      ]);
-    }
-    await dbClient.query("COMMIT");
-  } catch (error) {
-    await dbClient.query("ROLLBACK");
-    throw error;
-  } finally {
-    await dbClient.end();
-  }
+  await prisma.transaction.createMany({
+    data: transactionData,
+    skipDuplicates: true, // This will handle the ON CONFLICT DO NOTHING part
+  });
 }
 
 async function updateTransactions(transactions: Transaction[]) {
-  const dbClient = new VercelClient();
-  await dbClient.connect();
-
-  try {
-    await dbClient.query("BEGIN");
-    const updateQuery = `
-      UPDATE transactions
-      SET amount = $3, date = $4, currency = $5, merchant = $6
-      WHERE transaction_id = $1 AND account_id = $2
-    `;
-    for (const transaction of transactions) {
-      await dbClient.query(updateQuery, [
-        transaction.transaction_id,
-        transaction.account_id,
-        transaction.amount,
-        transaction.date,
-        transaction.iso_currency_code,
-        transaction.merchant_name,
-      ]);
-    }
-    await dbClient.query("COMMIT");
-  } catch (error) {
-    await dbClient.query("ROLLBACK");
-    throw error;
-  } finally {
-    await dbClient.end();
+  for (const transaction of transactions) {
+    await prisma.transaction.updateMany({
+      where: {
+        transactionId: transaction.transaction_id,
+        accountId: transaction.account_id,
+      },
+      data: {
+        amount: transaction.amount,
+        date: transaction.date,
+        currency: transaction.iso_currency_code,
+        merchant: transaction.merchant_name,
+      },
+    });
   }
 }
 
 async function markTransactionsAsDeleted(transactions: RemovedTransaction[]) {
-  const dbClient = new VercelClient();
-  await dbClient.connect();
-
-  try {
-    await dbClient.query("BEGIN");
-    const deleteQuery = `
-      UPDATE transactions
-      SET is_deleted = true
-      WHERE transaction_id = $1 AND account_id = $2
-    `;
-    for (const transaction of transactions) {
-      await dbClient.query(deleteQuery, [
-        transaction.transaction_id,
-        transaction.account_id,
-      ]);
-    }
-    await dbClient.query("COMMIT");
-  } catch (error) {
-    await dbClient.query("ROLLBACK");
-    throw error;
-  } finally {
-    await dbClient.end();
+  for (const transaction of transactions) {
+    await prisma.transaction.updateMany({
+      where: {
+        transactionId: transaction.transaction_id,
+        accountId: transaction.account_id,
+      },
+      data: {
+        isDeleted: true,
+      },
+    });
   }
 }
+
+// async function insertTransactions(transactions: Transaction[]) {
+//   const dbClient = new VercelClient();
+//   await dbClient.connect();
+
+//   try {
+//     await dbClient.query("BEGIN");
+//     const insertQuery = `
+//       INSERT INTO transactions (account_id, amount, currency, date, merchant, merchant_id, transaction_id)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7)
+//       ON CONFLICT (transaction_id, account_id) DO NOTHING
+//     `;
+//     for (const transaction of transactions) {
+//       await dbClient.query(insertQuery, [
+//         transaction.account_id,
+//         transaction.amount,
+//         transaction.iso_currency_code,
+//         transaction.datetime,
+//         transaction.merchant_name,
+//         transaction.merchant_entity_id,
+//         transaction.transaction_id,
+//       ]);
+//     }
+//     await dbClient.query("COMMIT");
+//   } catch (error) {
+//     await dbClient.query("ROLLBACK");
+//     throw error;
+//   } finally {
+//     await dbClient.end();
+//   }
+// }
+
+// async function updateTransactions(transactions: Transaction[]) {
+//   const dbClient = new VercelClient();
+//   await dbClient.connect();
+
+//   try {
+//     await dbClient.query("BEGIN");
+//     const updateQuery = `
+//       UPDATE transactions
+//       SET amount = $3, date = $4, currency = $5, merchant = $6
+//       WHERE transaction_id = $1 AND account_id = $2
+//     `;
+//     for (const transaction of transactions) {
+//       await dbClient.query(updateQuery, [
+//         transaction.transaction_id,
+//         transaction.account_id,
+//         transaction.amount,
+//         transaction.date,
+//         transaction.iso_currency_code,
+//         transaction.merchant_name,
+//       ]);
+//     }
+//     await dbClient.query("COMMIT");
+//   } catch (error) {
+//     await dbClient.query("ROLLBACK");
+//     throw error;
+//   } finally {
+//     await dbClient.end();
+//   }
+// }
+
+// async function markTransactionsAsDeleted(transactions: RemovedTransaction[]) {
+//   const dbClient = new VercelClient();
+//   await dbClient.connect();
+
+//   try {
+//     await dbClient.query("BEGIN");
+//     const deleteQuery = `
+//       UPDATE transactions
+//       SET is_deleted = true
+//       WHERE transaction_id = $1 AND account_id = $2
+//     `;
+//     for (const transaction of transactions) {
+//       await dbClient.query(deleteQuery, [
+//         transaction.transaction_id,
+//         transaction.account_id,
+//       ]);
+//     }
+//     await dbClient.query("COMMIT");
+//   } catch (error) {
+//     await dbClient.query("ROLLBACK");
+//     throw error;
+//   } finally {
+//     await dbClient.end();
+//   }
+// }

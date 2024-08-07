@@ -1,5 +1,4 @@
 
-import { authManager } from "@/app/utils/authManagerInstance";
 import client from "@/app/utils/plaid";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,13 +11,6 @@ export async function POST(req: NextRequest, res: NextResponse) {
     const tokenResponse = await client.itemPublicTokenExchange({
       public_token,
     });
-    // console.log('tokenResponse : ', tokenResponse);
-    authManager.setAccessToken(tokenResponse.data.access_token);
-
-    console.log(
-      "Token set in createAccessToken:",
-      authManager.getAccessToken()
-    );
 
     ITEM_ID = tokenResponse.data.item_id;
 
