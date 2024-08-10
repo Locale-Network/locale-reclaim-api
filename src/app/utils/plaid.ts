@@ -34,8 +34,7 @@ export const PLAID_ANDROID_PACKAGE_NAME =
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-
-export const formatError = (error) => {
+export const formatError = (error: any) => {
   return {
     error: {
       status_code: error.status,
