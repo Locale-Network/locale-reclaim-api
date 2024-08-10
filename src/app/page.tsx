@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "./components/Link";
-import { Provider } from "./context";
 import styles from "./page.module.css";
 
 export interface StateInterface {
@@ -130,22 +129,22 @@ export default function Home() {
   }, [state.accessToken, state.isItemAccess]);
 
   return (
-    <Provider>
-      <main className={styles.main}>
-        <div>
-          {(!state.isItemAccess || !state.accessToken) && (
-            <Link data={state} setState={setState} />
-          )}
-          {state.isItemAccess && state.accessToken && (
+    <main className={styles.main}>
+      <div>
+        {(!state.isItemAccess || !state.accessToken) && (
+          <Link data={state} setState={setState} />
+        )}
+        {state.isItemAccess && state.accessToken && (
+          <div>
             <div>
-              <div>
-                <strong>Name :</strong> {user.name}
-              </div>
-              <div><strong>Official name :</strong> {user.officialName}</div>
+              <strong>Name :</strong> {user.name}
             </div>
-          )}
-        </div>
-      </main>
-    </Provider>
+            <div>
+              <strong>Official name :</strong> {user.officialName}
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
