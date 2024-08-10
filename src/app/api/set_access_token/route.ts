@@ -22,8 +22,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
       },
       {status: 200}
     );
-  } catch (error) {
-    // console.log('error : ', error);
+  } catch (error: any) {
     return NextResponse.json(
       {
         error: error?.response?.data.error,

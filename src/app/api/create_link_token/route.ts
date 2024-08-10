@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
 
     const createTokenResponse = await client.linkTokenCreate(configs);
     return NextResponse.json(createTokenResponse.data, {status: 200});
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         error: error?.response,
