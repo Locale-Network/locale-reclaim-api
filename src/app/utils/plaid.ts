@@ -37,11 +37,11 @@ export const sleep = (ms: number) =>
 export const formatError = (error: any) => {
   return {
     error: {
-      status_code: error.status,
-      request_id: error.request_id,
-      error_code: error.error_code,
-      error_message: error.error_message,
-      display_message: error.display_message,
+      status_code: error?.status,
+      request_id: error?.request_id,
+      error_code: error?.error_code,
+      error_message: error?.error_message,
+      display_message: error?.display_message,
     },
   };
 };

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
+    const url = new URL(request?.url);
     const access_token = url.searchParams.get("access_token");
 
     if (!access_token) {
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(selectedAccount, {status: 200});
   } catch (error: any) {
-    return NextResponse.json(formatError(error?.response), {status: 500});
+    const formattedError = formatError(error?.response);
+    const status = formattedError?.error?.status_code || 500;
+    return NextResponse.json(formattedError, {status});
   }
 }

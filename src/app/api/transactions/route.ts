@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, res: NextResponse) {
     let removed: RemovedTransaction[] = [];
     let hasMore = true;
 
-    const url = new URL(req.url);
+    const url = new URL(req?.url);
     const access_token = url.searchParams.get("access_token");
 
     if (!access_token) {

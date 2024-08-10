@@ -6,7 +6,7 @@ let ITEM_ID: string | null = null;
 export async function POST(request: NextRequest) {
   try {
 
-    const url = new URL(request.url);
+    const url = new URL(request?.url);
     const access_token = url.searchParams.get('access_token');
 
     if (!access_token) {
