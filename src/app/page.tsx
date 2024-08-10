@@ -45,7 +45,10 @@ export default function Home() {
   });
 
   const getInfo = useCallback(async () => {
-    const response = await fetch(`/api/info?access_token=${state.accessToken}`, {method: "POST"});
+    const response = await fetch(
+      `/api/info?access_token=${state.accessToken}`,
+      {method: "POST"}
+    );
     if (!response.ok) {
       setState((prevState) => ({...prevState, backend: false}));
       return {paymentInitiation: false};
@@ -105,9 +108,14 @@ export default function Home() {
 
   useEffect(() => {
     const init = async () => {
-      await fetch(`/api/transactions?access_token=${state.accessToken}`, {method: "GET"});
+      await fetch(`/api/transactions?access_token=${state.accessToken}`, {
+        method: "GET",
+      });
 
-      const response = await fetch(`/api/accounts?access_token=${state.accessToken}`, {method: "GET"});
+      const response = await fetch(
+        `/api/accounts?access_token=${state.accessToken}`,
+        {method: "GET"}
+      );
 
       const data = await response.json();
       console.log(data);
@@ -124,14 +132,16 @@ export default function Home() {
   return (
     <Provider>
       <main className={styles.main}>
-        <div className={styles.description}>
+        <div>
           {(!state.isItemAccess || !state.accessToken) && (
             <Link data={state} setState={setState} />
           )}
           {state.isItemAccess && state.accessToken && (
             <div>
-              <div>Name : {user.name}</div>
-              <div>Official name : {user.officialName}</div>
+              <div>
+                <strong>Name :</strong> {user.name}
+              </div>
+              <div><strong>Official name :</strong> {user.officialName}</div>
             </div>
           )}
         </div>
