@@ -1,11 +1,11 @@
-import moment from "moment";
-import { NextRequest, NextResponse } from "next/server";
 import client, {
   PLAID_ANDROID_PACKAGE_NAME,
   PLAID_COUNTRY_CODES,
   PLAID_PRODUCTS,
   PLAID_REDIRECT_URI,
-} from "../../utils/plaid";
+} from "@/utils/plaid";
+import moment from "moment";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest, res: NextResponse) {
   try {

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import Link from "./components/Link";
+import { usePlaidLink } from "react-plaid-link";
+
 import styles from "./page.module.css";
 
 export interface StateInterface {
@@ -62,7 +63,7 @@ export default function Home() {
       isPaymentInitiation: paymentInitiation,
     }));
     return {paymentInitiation};
-  }, []);
+  }, [state.accessToken]);
 
   const generateToken = useCallback(async (isPaymentInitiation: boolean) => {
     // Link tokens for 'payment_initiation' use a different creation flow in your backend.
@@ -128,19 +129,90 @@ export default function Home() {
     }
   }, [state.accessToken, state.isItemAccess]);
 
+  const {linkToken, isPaymentInitiation} = state;
+
+  const onSuccess = useCallback(
+    (public_token: string) => {
+      // If the access_token is needed, send public_token to server
+      const exchangePublicTokenForAccessToken = async () => {
+        const response = await fetch("/api/set_access_token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({public_token}),
+        });
+        if (!response.ok) {
+          setState((prevState: StateInterface) => ({
+            ...prevState,
+            itemId: `no item_id retrieved`,
+            accessToken: `no access_token retrieved`,
+            isItemAccess: false,
+          }));
+          return;
+        }
+        const data = await response.json();
+        setState((prevState: StateInterface) => ({
+          ...prevState,
+          itemId: data.item_id,
+          accessToken: data.access_token,
+          isItemAccess: true,
+        }));
+      };
+
+      // 'payment_initiation' products do not require the public_token to be exchanged for an access_token.
+      if (isPaymentInitiation) {
+        setState((prevState: StateInterface) => ({
+          ...prevState,
+          isItemAccess: false,
+        }));
+      } else {
+        exchangePublicTokenForAccessToken();
+      }
+
+      setState((prevState: StateInterface) => ({
+        ...prevState,
+        linkSuccess: true,
+      }));
+      // window.history.pushState("", "", "/");
+    },
+    [isPaymentInitiation, setState]
+  );
+
+  let isOauth = false;
+  const config: Parameters<typeof usePlaidLink>[0] = {
+    token: linkToken!,
+    onSuccess,
+  };
+
+  if (
+    typeof window !== "undefined" &&
+    window.location.href.includes("?oauth_state_id=")
+  ) {
+    // TODO: figure out how to delete this ts-ignore
+    // @ts-ignore
+    config.receivedRedirectUri = window.location.href;
+    isOauth = true;
+  }
+
+  const {open, ready} = usePlaidLink(config);
+
+  useEffect(() => {
+    if (!state.isItemAccess || !state.accessToken) {
+      open();
+    }
+  }, [open, state.accessToken, state.isItemAccess]);
+
   return (
     <main className={styles.main}>
       <div>
-        {(!state.isItemAccess || !state.accessToken) && (
-          <Link data={state} setState={setState} />
-        )}
         {state.isItemAccess && state.accessToken && (
           <div>
             <div>
-              <strong>Name :</strong> {user.name}
+              <strong className="title">Account Name :</strong> {user.name}
             </div>
             <div>
-              <strong>Official name :</strong> {user.officialName}
+              <strong className="title">Official name :</strong> {user.officialName}
             </div>
           </div>
         )}
