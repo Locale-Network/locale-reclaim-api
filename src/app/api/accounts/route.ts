@@ -1,4 +1,4 @@
-import client, { formatError } from "@/app/utils/plaid";
+import client, { formatError } from "@/utils/plaid";
 import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 

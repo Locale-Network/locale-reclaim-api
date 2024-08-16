@@ -1,5 +1,5 @@
 
-import client from "@/app/utils/plaid";
+import client from "@/utils/plaid";
 import { NextRequest, NextResponse } from "next/server";
 
 let ITEM_ID = "";

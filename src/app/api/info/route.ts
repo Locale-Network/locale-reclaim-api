@@ -1,4 +1,4 @@
-import { PLAID_PRODUCTS } from "@/app/utils/plaid";
+import { PLAID_PRODUCTS } from "@/utils/plaid";
 import { NextRequest, NextResponse } from "next/server";
 
 let ITEM_ID: string | null = null;
