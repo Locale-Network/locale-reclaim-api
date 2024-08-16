@@ -32,11 +32,10 @@ export async function POST(request: Request) {
   if (providerId) {
     await reclaimClient.buildProofRequest(providerId);
 
+    reclaimClient.setAppCallbackUrl(callbackUrl);
     if (deepLinkUrl) {
       reclaimClient.setAppCallbackUrl(deepLinkUrl);
     }
-
-    reclaimClient.setAppCallbackUrl(callbackUrl);
 
     reclaimClient.setSignature(
       await reclaimClient.generateSignature(appSecret)
