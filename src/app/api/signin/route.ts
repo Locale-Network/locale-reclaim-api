@@ -1,6 +1,6 @@
-import { Reason } from "@/app/constants/reason.enum";
+import { Reason } from "@/constants/reason.enum";
 import { Reclaim } from "@reclaimprotocol/js-sdk";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 interface SignInBody {
   providerId: string;
