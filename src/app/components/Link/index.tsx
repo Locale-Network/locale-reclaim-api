@@ -1,6 +1,6 @@
 "use client";
 import Button from "plaid-threads/Button";
-import React, { useEffect } from "react";
+import React from "react";
 import { usePlaidLink } from "react-plaid-link";
 
 import { StateInterface } from "@/app/page";
@@ -73,12 +73,6 @@ const Link = ({data, setState}: {data: StateInterface; setState: any}) => {
   }
 
   const {open, ready} = usePlaidLink(config);
-
-  useEffect(() => {
-    if (isOauth && ready) {
-      open();
-    }
-  }, [ready, open, isOauth]);
 
   return (
     <Button type="button" large onClick={() => open()} disabled={!ready}>
