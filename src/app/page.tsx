@@ -1,94 +1,149 @@
-import Image from "next/image";
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import Link from "./components/Link";
 import styles from "./page.module.css";
 
+export interface StateInterface {
+  linkSuccess: boolean;
+  isItemAccess: boolean;
+  isPaymentInitiation: boolean;
+  linkToken: string | null;
+  accessToken: string | null;
+  itemId: string | null;
+  isError: boolean;
+  backend: boolean;
+  products: string[];
+  linkTokenError: {
+    error_message: string;
+    error_code: string;
+    error_type: string;
+  };
+}
+
 export default function Home() {
+  const [state, setState] = useState<StateInterface>({
+    linkSuccess: false,
+    isItemAccess: true,
+    isPaymentInitiation: false,
+    linkToken: "", // Don't set to null or error message will show up briefly when site loads
+    accessToken: null,
+    itemId: null,
+    isError: false,
+    backend: true,
+    products: ["transactions"],
+    linkTokenError: {
+      error_type: "",
+      error_code: "",
+      error_message: "",
+    },
+  });
+
+  const [user, setUser] = useState<{name: string; officialName: string}>({
+    name: "",
+    officialName: "",
+  });
+
+  const getInfo = useCallback(async () => {
+    const response = await fetch(
+      `/api/info?access_token=${state.accessToken}`,
+      {method: "POST"}
+    );
+    if (!response.ok) {
+      setState((prevState) => ({...prevState, backend: false}));
+      return {paymentInitiation: false};
+    }
+    const data = await response.json();
+    const paymentInitiation: boolean =
+      data.products.includes("payment_initiation");
+
+    setState((prevState) => ({
+      ...prevState,
+      products: data.products,
+      isPaymentInitiation: paymentInitiation,
+    }));
+    return {paymentInitiation};
+  }, []);
+
+  const generateToken = useCallback(async (isPaymentInitiation: boolean) => {
+    // Link tokens for 'payment_initiation' use a different creation flow in your backend.
+    const path = isPaymentInitiation
+      ? "/api/create_link_token_for_payment"
+      : "/api/create_link_token";
+    const response = await fetch(path, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      setState((prevState) => ({...prevState, linkToken: null}));
+      return;
+    }
+    const data = await response.json();
+    if (data) {
+      setState((prevState) => ({
+        ...prevState,
+        linkToken: data.link_token,
+      }));
+    }
+
+    // Save the link_token to be used later in the Oauth flow.
+    localStorage.setItem("link_token", data.link_token);
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      const {paymentInitiation} = await getInfo(); // used to determine which path to take when generating token
+      // do not generate a new token for OAuth redirect; instead
+      // setLinkToken from localStorage
+      if (window.location.href.includes("?oauth_state_id=")) {
+        setState((prevState) => ({
+          ...prevState,
+          linkToken: localStorage.getItem("link_token"),
+        }));
+        return;
+      }
+      generateToken(paymentInitiation);
+    };
+    init();
+  }, [generateToken, getInfo]);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetch(`/api/transactions?access_token=${state.accessToken}`, {
+        method: "GET",
+      });
+
+      const response = await fetch(
+        `/api/accounts?access_token=${state.accessToken}`,
+        {method: "GET"}
+      );
+
+      const data = await response.json();
+      console.log(data);
+      setUser({
+        name: data.name,
+        officialName: data.official_name,
+      });
+    };
+    if (state.accessToken) {
+      init();
+    }
+  }, [state.accessToken, state.isItemAccess]);
+
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <div>
+        {(!state.isItemAccess || !state.accessToken) && (
+          <Link data={state} setState={setState} />
+        )}
+        {state.isItemAccess && state.accessToken && (
+          <div>
+            <div>
+              <strong>Name :</strong> {user.name}
+            </div>
+            <div>
+              <strong>Official name :</strong> {user.officialName}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
