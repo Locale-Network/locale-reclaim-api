@@ -37,8 +37,6 @@ const VerificationStatusComponent = async ({
   reclaimClient.setRedirectUrl(redirectUrl);
   reclaimClient.setAppCallbackUrl(callbackUrl);
 
-  reclaimClient.setParams({ URL_PARAMS_GRD_1: "123" });
-
   reclaimClient.setSignature(await reclaimClient.generateSignature(appSecret));
 
   const message = `for account verification ${account} ${Date.now().toString()}`;
