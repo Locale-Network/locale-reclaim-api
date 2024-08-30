@@ -1,100 +1,221 @@
-import { Reason } from "@/constants/reason.enum";
-import { Reclaim } from "@reclaimprotocol/js-sdk";
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { usePlaidLink } from "react-plaid-link";
 
-import { Button } from "@/components/ui/button";
-import { Suspense } from "react";
-import Link from "next/link";
-import QRCode from "react-qr-code";
-import VerificationStatus from "@/containers/VerificationStatus/VerificationStatus";
-import { Skeleton } from "@/components/ui/skeleton";
-
-interface ReclaimPageProps {
-  searchParams: {
-    account: string;
+export interface StateInterface {
+  linkSuccess: boolean;
+  isItemAccess: boolean;
+  isPaymentInitiation: boolean;
+  linkToken: string | null;
+  accessToken: string | null;
+  itemId: string | null;
+  isError: boolean;
+  backend: boolean;
+  products: string[];
+  linkTokenError: {
+    error_message: string;
+    error_code: string;
+    error_type: string;
   };
 }
 
-const VerificationStatusComponent = async ({
-  account,
-}: {
-  account: string;
-}) => {
-  const appSecret = process.env.SECRET_ID;
-  const appId = process.env.APP_ID;
-  const callbackUrl = process.env.RECLAIM_CALLBACK_URL;
-  const providerId = process.env.RECLAIM_PROVIDER_ID;
-  if (!appSecret || !appId || !callbackUrl || !providerId) {
-    throw new Error("Missing configuration");
+export default function Home() {
+  const [state, setState] = useState<StateInterface>({
+    linkSuccess: false,
+    isItemAccess: true,
+    isPaymentInitiation: false,
+    linkToken: "", // Don't set to null or error message will show up briefly when site loads
+    accessToken: null,
+    itemId: null,
+    isError: false,
+    backend: true,
+    products: ["transactions"],
+    linkTokenError: {
+      error_type: "",
+      error_code: "",
+      error_message: "",
+    },
+  });
+
+  const [user, setUser] = useState<{ name: string; officialName: string }>({
+    name: "",
+    officialName: "",
+  });
+
+  const getInfo = useCallback(async () => {
+    const response = await fetch(
+      `/api/info?access_token=${state.accessToken}`,
+      { method: "POST" }
+    );
+    if (!response.ok) {
+      setState((prevState) => ({ ...prevState, backend: false }));
+      return { paymentInitiation: false };
+    }
+    const data = await response.json();
+    const paymentInitiation: boolean =
+      data.products.includes("payment_initiation");
+
+    setState((prevState) => ({
+      ...prevState,
+      products: data.products,
+      isPaymentInitiation: paymentInitiation,
+    }));
+    return { paymentInitiation };
+  }, [state.accessToken]);
+
+  const generateToken = useCallback(async (isPaymentInitiation: boolean) => {
+    // Link tokens for 'payment_initiation' use a different creation flow in your backend.
+    const path = isPaymentInitiation
+      ? "/api/create_link_token_for_payment"
+      : "/api/create_link_token";
+    const response = await fetch(path, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      setState((prevState) => ({ ...prevState, linkToken: null }));
+      return;
+    }
+    const data = await response.json();
+    if (data) {
+      setState((prevState) => ({
+        ...prevState,
+        linkToken: data.link_token,
+      }));
+    }
+
+    // Save the link_token to be used later in the Oauth flow.
+    localStorage.setItem("link_token", data.link_token);
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      const { paymentInitiation } = await getInfo(); // used to determine which path to take when generating token
+      // do not generate a new token for OAuth redirect; instead
+      // setLinkToken from localStorage
+      if (window.location.href.includes("?oauth_state_id=")) {
+        setState((prevState) => ({
+          ...prevState,
+          linkToken: localStorage.getItem("link_token"),
+        }));
+        return;
+      }
+      generateToken(paymentInitiation);
+    };
+    init();
+  }, [generateToken, getInfo]);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetch(`/api/transactions?access_token=${state.accessToken}`, {
+        method: "GET",
+      });
+
+      const response = await fetch(
+        `/api/accounts?access_token=${state.accessToken}`,
+        { method: "GET" }
+      );
+
+      const data = await response.json();
+      console.log(data);
+      setUser({
+        name: data.name,
+        officialName: data.official_name,
+      });
+    };
+    if (state.accessToken) {
+      init();
+    }
+  }, [state.accessToken, state.isItemAccess]);
+
+  const { linkToken, isPaymentInitiation } = state;
+
+  const onSuccess = useCallback(
+    (public_token: string) => {
+      // If the access_token is needed, send public_token to server
+      const exchangePublicTokenForAccessToken = async () => {
+        const response = await fetch("/api/set_access_token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ public_token }),
+        });
+        if (!response.ok) {
+          setState((prevState: StateInterface) => ({
+            ...prevState,
+            itemId: `no item_id retrieved`,
+            accessToken: `no access_token retrieved`,
+            isItemAccess: false,
+          }));
+          return;
+        }
+        const data = await response.json();
+        setState((prevState: StateInterface) => ({
+          ...prevState,
+          itemId: data.item_id,
+          accessToken: data.access_token,
+          isItemAccess: true,
+        }));
+      };
+
+      // 'payment_initiation' products do not require the public_token to be exchanged for an access_token.
+      if (isPaymentInitiation) {
+        setState((prevState: StateInterface) => ({
+          ...prevState,
+          isItemAccess: false,
+        }));
+      } else {
+        exchangePublicTokenForAccessToken();
+      }
+
+      setState((prevState: StateInterface) => ({
+        ...prevState,
+        linkSuccess: true,
+      }));
+      // window.history.pushState("", "", "/");
+    },
+    [isPaymentInitiation, setState]
+  );
+
+  let isOauth = false;
+  const config: Parameters<typeof usePlaidLink>[0] = {
+    token: linkToken!,
+    onSuccess,
+  };
+
+  if (
+    typeof window !== "undefined" &&
+    window.location.href.includes("?oauth_state_id=")
+  ) {
+    // TODO: figure out how to delete this ts-ignore
+    // @ts-ignore
+    config.receivedRedirectUri = window.location.href;
+    isOauth = true;
   }
 
-  const reclaimClient = new Reclaim.ProofRequest(appId);
+  const { open, ready } = usePlaidLink(config);
 
-  await reclaimClient.buildProofRequest(providerId);
-
-  reclaimClient.setAppCallbackUrl(callbackUrl);
-
-  reclaimClient.setSignature(await reclaimClient.generateSignature(appSecret));
-
-  const message = `for account verification ${account} ${Date.now().toString()}`;
-  reclaimClient.addContext(account, message);
-
-  const { requestUrl: signedUrl, statusUrl } =
-    await reclaimClient.createVerificationRequest();
-
-  return <VerificationStatus signedUrl={signedUrl} statusUrl={statusUrl} />;
-};
-
-export default async function ReclaimPage({ searchParams }: ReclaimPageProps) {
-  const { account } = searchParams;
-
-  if (!account) {
-    return <div>No account provided</div>;
-  }
+  useEffect(() => {
+    if (!state.isItemAccess || !state.accessToken) {
+      open();
+    }
+  }, [open, state.accessToken, state.isItemAccess]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <Suspense
-        fallback={
-          <>
-            <div className="mb-4">
-              <Skeleton className="w-[256px] h-[256px]" />
-            </div>
-            <Button disabled>
-              <span className="mr-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              </span>
-              Verifying...
-            </Button>
-            <div className="mt-4">
-              <Skeleton className="w-[160px] h-[20px]" />
+    <main>
+      <div>
+        {state.isItemAccess && state.accessToken && (
+          <div>
+            <div>
+              <strong className="title">Account Name :</strong> {user.name}
             </div>
             <div>
-              <Skeleton className="w-[20px] h-[20px]" />
+              <strong className="title">Official name :</strong>{" "}
+              {user.officialName}
             </div>
-          </>
-        }
-      >
-        <VerificationStatusComponent account={account} />
-      </Suspense>
-    </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
