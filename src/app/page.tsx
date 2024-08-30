@@ -2,8 +2,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
 
-import styles from "./page.module.css";
-
 export interface StateInterface {
   linkSuccess: boolean;
   isItemAccess: boolean;
@@ -39,7 +37,7 @@ export default function Home() {
     },
   });
 
-  const [user, setUser] = useState<{name: string; officialName: string}>({
+  const [user, setUser] = useState<{ name: string; officialName: string }>({
     name: "",
     officialName: "",
   });
@@ -47,11 +45,11 @@ export default function Home() {
   const getInfo = useCallback(async () => {
     const response = await fetch(
       `/api/info?access_token=${state.accessToken}`,
-      {method: "POST"}
+      { method: "POST" }
     );
     if (!response.ok) {
-      setState((prevState) => ({...prevState, backend: false}));
-      return {paymentInitiation: false};
+      setState((prevState) => ({ ...prevState, backend: false }));
+      return { paymentInitiation: false };
     }
     const data = await response.json();
     const paymentInitiation: boolean =
@@ -62,7 +60,7 @@ export default function Home() {
       products: data.products,
       isPaymentInitiation: paymentInitiation,
     }));
-    return {paymentInitiation};
+    return { paymentInitiation };
   }, [state.accessToken]);
 
   const generateToken = useCallback(async (isPaymentInitiation: boolean) => {
@@ -74,7 +72,7 @@ export default function Home() {
       method: "POST",
     });
     if (!response.ok) {
-      setState((prevState) => ({...prevState, linkToken: null}));
+      setState((prevState) => ({ ...prevState, linkToken: null }));
       return;
     }
     const data = await response.json();
@@ -91,7 +89,7 @@ export default function Home() {
 
   useEffect(() => {
     const init = async () => {
-      const {paymentInitiation} = await getInfo(); // used to determine which path to take when generating token
+      const { paymentInitiation } = await getInfo(); // used to determine which path to take when generating token
       // do not generate a new token for OAuth redirect; instead
       // setLinkToken from localStorage
       if (window.location.href.includes("?oauth_state_id=")) {
@@ -114,7 +112,7 @@ export default function Home() {
 
       const response = await fetch(
         `/api/accounts?access_token=${state.accessToken}`,
-        {method: "GET"}
+        { method: "GET" }
       );
 
       const data = await response.json();
@@ -129,7 +127,7 @@ export default function Home() {
     }
   }, [state.accessToken, state.isItemAccess]);
 
-  const {linkToken, isPaymentInitiation} = state;
+  const { linkToken, isPaymentInitiation } = state;
 
   const onSuccess = useCallback(
     (public_token: string) => {
@@ -140,7 +138,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({public_token}),
+          body: JSON.stringify({ public_token }),
         });
         if (!response.ok) {
           setState((prevState: StateInterface) => ({
@@ -195,7 +193,7 @@ export default function Home() {
     isOauth = true;
   }
 
-  const {open, ready} = usePlaidLink(config);
+  const { open, ready } = usePlaidLink(config);
 
   useEffect(() => {
     if (!state.isItemAccess || !state.accessToken) {
@@ -204,7 +202,7 @@ export default function Home() {
   }, [open, state.accessToken, state.isItemAccess]);
 
   return (
-    <main className={styles.main}>
+    <main>
       <div>
         {state.isItemAccess && state.accessToken && (
           <div>
@@ -212,7 +210,8 @@ export default function Home() {
               <strong className="title">Account Name :</strong> {user.name}
             </div>
             <div>
-              <strong className="title">Official name :</strong> {user.officialName}
+              <strong className="title">Official name :</strong>{" "}
+              {user.officialName}
             </div>
           </div>
         )}

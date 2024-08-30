@@ -6,14 +6,21 @@ import client, {
 } from "@/utils/plaid";
 import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
+import { CountryCode, LinkTokenCreateRequest, Products } from "plaid";
 
 export async function POST(req: NextRequest, res: NextResponse) {
   try {
-    const configs: any = {
-      user: {client_user_id: "user-id"},
+    const products: Products[] = PLAID_PRODUCTS.map(
+      (product) => product as Products
+    );
+    const countryCodes: CountryCode[] = PLAID_COUNTRY_CODES.map(
+      (countryCode) => countryCode as CountryCode
+    );
+    const configs: LinkTokenCreateRequest = {
+      user: { client_user_id: "user-id" },
       client_name: "Plaid Quickstart",
-      products: PLAID_PRODUCTS,
-      country_codes: PLAID_COUNTRY_CODES,
+      products,
+      country_codes: countryCodes,
       language: "en",
     };
 
@@ -34,13 +41,24 @@ export async function POST(req: NextRequest, res: NextResponse) {
     }
 
     const createTokenResponse = await client.linkTokenCreate(configs);
-    return NextResponse.json(createTokenResponse.data, {status: 200});
+    if (createTokenResponse.status !== 200) {
+      return NextResponse.json(
+        {
+          error: "Failed to create link token",
+        },
+        { status: 400 }
+      );
+    }
+    console.log(">>>> createTokenResponse : ", createTokenResponse.data);
+    // return NextResponse.json(createTokenResponse.data, { status: 200 });
+    return NextResponse.json(createTokenResponse.data, { status: 200 });
   } catch (error: any) {
+    console.log("error : ", error);
     return NextResponse.json(
       {
         error: error?.response,
       },
-      {status: error?.response?.status}
+      { status: error?.response?.status }
     );
   }
 }
