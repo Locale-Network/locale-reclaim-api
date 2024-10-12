@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { verifyProof } from "@reclaimprotocol/js-sdk";
+import { Context, Proof, verifyProof } from "@reclaimprotocol/js-sdk";
 import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   console.log("decodedProof", decodedProof);
 
-  const proof = JSON.parse(decodedProof);
+  const proof = JSON.parse(decodedProof) as Proof;
 
   console.log("proof", proof);
 
@@ -30,7 +30,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const context = proof.claimData.context;
+  const rawContext = proof.claimData.context;
+  const context = JSON.parse(rawContext) as Context;
   const extractedParameterValues = proof.extractedParameterValues;
 
   console.log("ctx", context);
@@ -38,16 +39,11 @@ export async function POST(req: Request) {
 
   await prisma.proof.create({
     data: {
-      address: "0x",
-      proof: JSON.stringify(proof),
-      context: JSON.stringify(context),
+      address: context.contextAddress,
+      proof: decodedProof,
+      context: rawContext,
     },
   });
-
-  await sql`
-    INSERT INTO proofs (proof, context)
-    VALUES (${JSON.stringify(proof)}, ${JSON.stringify(context)})
-  `;
 
   return NextResponse.json(
     {
