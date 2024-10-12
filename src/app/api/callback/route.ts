@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
+  console.log("req", req);
+  console.log("text", await req.text());
   const proof = await req.json();
 
   console.log("proof", proof);
