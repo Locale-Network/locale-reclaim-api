@@ -7,8 +7,16 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   console.log("req", req);
-  console.log("text", await req.text());
-  const proof = await req.json();
+
+  const rawProof = await req.text();
+
+  console.log("rawProof", rawProof);
+
+  const decodedProof = decodeURIComponent(rawProof);
+
+  console.log("decodedProof", decodedProof);
+
+  const proof = JSON.parse(decodedProof);
 
   console.log("proof", proof);
 
