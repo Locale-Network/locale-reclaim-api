@@ -1,5 +1,5 @@
 import { Reason } from "@/constants/reason.enum";
-import { Reclaim } from "@reclaimprotocol/js-sdk";
+import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
 
 import { Button } from "@/components/ui/button";
 import { Suspense } from "react";
@@ -30,22 +30,29 @@ const VerificationStatusComponent = async ({
     throw new Error("Missing configuration");
   }
 
-  const reclaimClient = new Reclaim.ProofRequest(appId);
+  const reclaimProofRequest = await ReclaimProofRequest.init(
+    appId,
+    appSecret,
+    providerId
+  );
 
-  await reclaimClient.buildProofRequest(providerId, true, "V2Linking");
+  // await reclaimProofRequest.buildProofRequest(providerId, true, "V2Linking");
 
-  reclaimClient.setRedirectUrl(redirectUrl);
-  reclaimClient.setAppCallbackUrl(callbackUrl);
+  reclaimProofRequest.setRedirectUrl(redirectUrl);
+  reclaimProofRequest.setAppCallbackUrl(callbackUrl);
 
-  reclaimClient.setSignature(await reclaimClient.generateSignature(appSecret));
+  // reclaimProofRequest.setSignature(await reclaimProofRequest.generateSignature(appSecret));
 
   const message = `for account verification ${account} ${Date.now().toString()}`;
-  reclaimClient.addContext(account, message);
+  reclaimProofRequest.addContext(account, message);
 
-  const { requestUrl: signedUrl, statusUrl } =
-    await reclaimClient.createVerificationRequest();
+  const requestUrl = await reclaimProofRequest.getRequestUrl();
+  const statusUrl = reclaimProofRequest.getStatusUrl();
 
-  return <VerificationStatus signedUrl={signedUrl} statusUrl={statusUrl} />;
+  // const { requestUrl: signedUrl, statusUrl } =
+  //   await reclaimClient.createVerificationRequest();
+
+  return <VerificationStatus signedUrl={requestUrl} statusUrl={statusUrl} />;
 };
 
 export default async function ReclaimPage({ searchParams }: ReclaimPageProps) {

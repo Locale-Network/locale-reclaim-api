@@ -1,5 +1,5 @@
 import { Reason } from "@/constants/reason.enum";
-import { Reclaim } from "@reclaimprotocol/js-sdk";
+import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
 import { NextResponse } from "next/server";
 
 interface SignInBody {
@@ -10,6 +10,18 @@ interface SignInBody {
 }
 
 export async function POST(request: Request) {
+  // Add CORS headers
+  const headers = new Headers({
+    "Access-Control-Allow-Origin": "http://localhost:3000",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+
+  // Handle preflight request
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { headers });
+  }
+
   const {
     providerId,
     account,
@@ -27,19 +39,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const reclaimClient = new Reclaim.ProofRequest(appId);
+  const reclaimProofRequest = await ReclaimProofRequest.init(
+    appId,
+    appSecret,
+    providerId
+  );
 
   if (providerId) {
-    await reclaimClient.buildProofRequest(providerId);
+    // await reclaimClient.buildProofRequest(providerId);
 
-    reclaimClient.setAppCallbackUrl(callbackUrl);
+    reclaimProofRequest.setAppCallbackUrl(callbackUrl);
     if (deepLinkUrl) {
-      reclaimClient.setAppCallbackUrl(deepLinkUrl);
+      reclaimProofRequest.setRedirectUrl(deepLinkUrl);
     }
 
-    reclaimClient.setSignature(
-      await reclaimClient.generateSignature(appSecret)
-    );
+    // reclaimClient.setSignature(
+    //   await reclaimClient.generateSignature(appSecret)
+    // );
 
     if (account) {
       let message = "";
@@ -54,18 +70,31 @@ export async function POST(request: Request) {
           );
       }
       message += `${account} ${Date.now().toString()}`;
-      reclaimClient.addContext(account, message);
+      reclaimProofRequest.addContext(account, message);
     }
 
-    const { requestUrl: signedUrl } =
-      await reclaimClient.createVerificationRequest();
+    const signedUrl = await reclaimProofRequest.getRequestUrl();
 
-    return NextResponse.json({
-      name: "response",
-      error: false,
-      data: {
-        signedUrl,
+    return NextResponse.json(
+      {
+        name: "response",
+        error: false,
+        data: {
+          signedUrl,
+        },
       },
-    });
+      { headers }
+    ); // Add headers to the response
   }
+}
+
+// Add OPTIONS method handler
+export async function OPTIONS() {
+  const headers = new Headers({
+    "Access-Control-Allow-Origin": "http://localhost:3000",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+
+  return new NextResponse(null, { headers });
 }

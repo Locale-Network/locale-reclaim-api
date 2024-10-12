@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { Reclaim } from "@reclaimprotocol/js-sdk";
+import { verifyProof } from "@reclaimprotocol/js-sdk";
 import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
 
@@ -8,7 +8,9 @@ const prisma = new PrismaClient();
 export async function POST(req: Request) {
   const proof = await req.json();
 
-  const isProofVerified = await Reclaim.verifySignedProof(proof);
+  console.log("proof", proof);
+
+  const isProofVerified = await verifyProof(proof);
   if (!isProofVerified) {
     return NextResponse.json(
       {
