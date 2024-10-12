@@ -38,7 +38,7 @@ const VerificationStatusComponent = async ({
 
   // await reclaimProofRequest.buildProofRequest(providerId, true, "V2Linking");
 
-  reclaimProofRequest.setRedirectUrl(redirectUrl);
+  reclaimProofRequest.setRedirectUrl(decodeURIComponent(redirectUrl));
   reclaimProofRequest.setAppCallbackUrl(callbackUrl);
 
   // reclaimProofRequest.setSignature(await reclaimProofRequest.generateSignature(appSecret));
