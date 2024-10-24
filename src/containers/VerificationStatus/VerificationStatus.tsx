@@ -21,7 +21,7 @@ const VerificationStatus: React.FC<VerificationStatusProps> = ({
       try {
         const response = await fetch(statusUrl);
         const jsonResponse = await response.json();
-        if (jsonResponse.data.message === "OK") {
+        if (jsonResponse?.session?.statusV2 === "PROOF_SUBMITTED") {
           setIsVerified(true);
           clearInterval(intervalId);
         }

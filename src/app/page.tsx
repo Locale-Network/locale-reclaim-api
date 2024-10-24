@@ -38,6 +38,10 @@ const VerificationStatusComponent = async ({
 
   // await reclaimProofRequest.buildProofRequest(providerId, true, "V2Linking");
 
+  if (!redirectUrl) {
+    return <div>No redirectUrl provided</div>;
+  }
+
   reclaimProofRequest.setRedirectUrl(decodeURIComponent(redirectUrl));
   reclaimProofRequest.setAppCallbackUrl(callbackUrl);
 

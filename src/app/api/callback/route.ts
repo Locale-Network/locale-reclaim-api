@@ -10,11 +10,7 @@ export async function POST(req: Request) {
 
   const rawProof = await req.text();
 
-  console.log("rawProof", rawProof);
-
   const decodedProof = decodeURIComponent(rawProof);
-
-  console.log("decodedProof", decodedProof);
 
   const proof = JSON.parse(decodedProof) as Proof;
 
